@@ -25,7 +25,7 @@
     options: PermissionOption[];
   };
 
-  let agent = $state<AgentKind>("claude_code");
+  let agent = $state<AgentKind>("opencode");
   let cwd = $state("/home/user");
   let sessionId = $state<string | null>(null);
   let starting = $state(false);
@@ -134,9 +134,9 @@
     <span class="tag">agent harness</span>
     <div class="spacer"></div>
     <select bind:value={agent} disabled={!!sessionId}>
+      <option value="opencode">opencode</option>
       <option value="claude_code">Claude Code</option>
       <option value="codex">Codex CLI</option>
-      <option value="opencode">opencode</option>
     </select>
     <input class="cwd" bind:value={cwd} placeholder="working directory" disabled={!!sessionId} />
     <button onclick={start} disabled={starting || !!sessionId}>

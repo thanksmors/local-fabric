@@ -3,9 +3,9 @@
 //! ACP normalizes the protocol, so the only agent-specific knowledge the harness
 //! needs is *how to start each agent as an ACP subprocess*: the program, its
 //! arguments, and any environment. Everything after launch flows through the one
-//! [`super::connection::AcpConnection`]. The v1 slice ships the Claude Code
-//! launcher; Codex and opencode are scaffolded here so adding them is a data
-//! change, not new plumbing.
+//! [`super::connection::AcpConnection`]. opencode is the validated first agent
+//! (`opencode acp`); Claude Code and Codex launchers are wired here too so adding
+//! them is a data change, not new plumbing.
 
 use serde::{Deserialize, Serialize};
 

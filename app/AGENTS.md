@@ -36,6 +36,20 @@ and [architecture decision](../knowledge/decisions/2026-06-19-local-agent-harnes
 - **Keep the IPC boundary typed.** `src/lib/api.ts` mirrors the serde shapes in
   `acp/` and `store.rs`; update both sides together.
 
+## Agents: opencode + MiniMax (first working agent)
+
+- **opencode is the default agent.** Launched as `opencode acp` (an ACP server
+  over ndJSON stdio) by the `Opencode` `LaunchSpec` in `launchers.rs`. Verified
+  against opencode 1.17.8: it replies to our `initialize` frame with
+  `protocolVersion: 1`, matching `protocol::PROTOCOL_VERSION`.
+- **Model selection is opencode's, not the harness's.** ACP is model-agnostic;
+  opencode picks the model from its own config (`model` key, `provider/model`).
+  To run on MiniMax, configure opencode — do not add model/provider logic here.
+- **Keys never live in this repo.** Use `opencode auth login` (stored in
+  `~/.local/share/opencode/auth.json`). The harness spawns `opencode acp` with
+  the parent environment inherited; it holds no credentials and needs none.
+- Setup steps and the MiniMax model-id lookup live in [`README.md`](./README.md).
+
 ## Work Guidance
 
 - Frontend uses **Svelte 5 runes** (`$state`, `$props`, `$derived`) — match the
@@ -54,6 +68,9 @@ pnpm build              # vite build into build/
 cd src-tauri && cargo test   # 16 tests expected green
 cd src-tauri && cargo build  # full app links, zero warnings
 pnpm tauri dev          # live GUI run (needs a desktop session / DISPLAY)
+
+# End-to-end through real opencode (needs opencode installed + MiniMax authed):
+cd src-tauri && cargo test --test opencode_acp -- --ignored --nocapture
 ```
 
 Notes:

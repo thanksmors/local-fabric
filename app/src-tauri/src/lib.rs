@@ -8,7 +8,7 @@
 //!
 //! All cross-process work goes through [`acp`]; persistence through [`store`].
 
-mod acp;
+pub mod acp;
 mod files;
 mod store;
 

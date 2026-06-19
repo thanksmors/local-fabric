@@ -48,7 +48,8 @@ view, validating the architecture before the OS metaphor or app factory.
 |---|---|---|
 | `app/src-tauri/src/acp/protocol.rs` | done | Pure JSON-RPC + ACP types and `SessionEvent` normalization (unit-tested). |
 | `app/src-tauri/src/acp/connection.rs` | done | Async ACP client over agent stdio; request demux, streaming, permission tokens (integration-tested vs. mock agent). |
-| `app/src-tauri/src/acp/launchers.rs` | done | Per-agent launch config (Claude Code via `npx @zed-industries/claude-code-acp`; Codex/opencode scaffolded). |
+| `app/src-tauri/src/acp/launchers.rs` | done | Per-agent launch config. **opencode (`opencode acp`) is the validated default**; Claude Code (`npx @zed-industries/claude-code-acp`) and Codex wired too. |
+| `app/src-tauri/tests/opencode_acp.rs` | done | `#[ignore]` end-to-end test: drives real `opencode acp` through `AcpConnection` (initialize → session/new → session/prompt), asserts a streamed agent message. |
 | `app/src-tauri/src/store.rs` | done | SQLite sessions/settings persistence (unit-tested). |
 | `app/src-tauri/src/files.rs` | done | Read-only working-dir file listing (unit-tested). |
 | `app/src-tauri/src/lib.rs` | done | Tauri commands + event forwarding; approval gateway is the permission path through `connection`. |
@@ -107,8 +108,11 @@ pending a desktop session — the build container is headless (no `DISPLAY`).
    streaming render, approval dialog, restart reload, offline):** ⏳ pending a
    desktop/`DISPLAY` session.
 6. **Terminal/fs live pane:** ⏳ deferred (see File Map).
-7. **Second-launcher proof (v1.5 gate):** ⏳ Codex/opencode launchers scaffolded;
-   not yet exercised.
+7. **opencode + MiniMax (first real agent):** ✅ real `opencode acp` (v1.17.8)
+   replies to our `initialize` with `protocolVersion: 1`, proving live interop.
+   Full prompt round-trip on MiniMax is covered by the gated `opencode_acp` test
+   (`cargo test --test opencode_acp -- --ignored`), which the user runs after
+   `opencode auth login`. opencode is the default agent in the UI.
 
 ## Out of v1 Scope
 
