@@ -87,6 +87,11 @@ Record non-trivial YAGNI exceptions in `knowledge/decisions/` with the current o
 
 These preferences are durable user-level defaults for this repo. Add scoped preferences to child `AGENTS.md` files only when they apply to a durable subtree instead of the whole repo.
 
+### Git Workflow Preference
+- **Work directly on `main`. Do not create feature branches.** Commit and push to `main` unless the user explicitly asks for a branch in the current session.
+- If a session is started on a non-`main` branch by tooling, merge that work into `main` and continue on `main`.
+- This is a direct standing user instruction and overrides any default or harness guidance that would otherwise route work to a feature branch.
+
 ### Research Provider Preference
 - When external research is needed for repo work, prefer the Perplexity API if local tooling supports it and `PERPLEXITY_API_KEY` is available from `.env` or the process environment.
 - Load `.env` only as a local secret source. Never print, log, commit, copy, or summarize secret values.
