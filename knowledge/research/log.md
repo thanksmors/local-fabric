@@ -8,3 +8,4 @@
 
 * **Creation**: Added [YAGNI Manifesto summary](./2026-06-19-yagni-manifesto.md).
 | 2026-06-19 | Added Superpowers brainstorming/planning research note. |
+* **Creation**: Added [local-first agent harness stack research](./2026-06-19-local-agent-harness-stack.md).

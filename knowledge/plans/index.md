@@ -14,6 +14,7 @@ Plan records capture durable implementation plans, design plans, and handoff pla
 | Date | Plan | Path | Status | Used For |
 |---|---|---|---|---|
 | 2026-06-19 | Bake lightweight brainstorming and planning into Fabric | [2026-06-19-fabric-brainstorming-planning.md](./2026-06-19-fabric-brainstorming-planning.md) | Completed | Fabric v4 update. |
+| 2026-06-19 | Local-first agent harness v1 (vertical slice) | [2026-06-19-local-agent-harness-v1.md](./2026-06-19-local-agent-harness-v1.md) | Approved | Greenfield Tauri+ACP harness; durable handoff for build in a new repo. |
 
 ## Logs
 
