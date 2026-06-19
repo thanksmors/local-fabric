@@ -15,6 +15,7 @@ Learning notes capture reusable insights discovered during implementation, debug
 | 2026-06-18 | Context indexes reduce hallucinated structure | [2026-06-18-context-indexes-prevent-orphans.md](./2026-06-18-context-indexes-prevent-orphans.md) | Fabric scaffolds | [Fabric knowledge-capture decision](../decisions/2026-06-18-fabric-knowledge-capture.md) |
 | 2026-06-19 | YAGNI keeps Fabric lean | [2026-06-19-yagni-keeps-fabric-lean.md](./2026-06-19-yagni-keeps-fabric-lean.md) | Fabric artifact creation | [YAGNI Gate decision](../decisions/2026-06-19-yagni-gate.md) |
 | 2026-06-19 | Capture brainstorming outputs, not raw noise | [2026-06-19-brainstorming-outputs-not-noise.md](./2026-06-19-brainstorming-outputs-not-noise.md) | Brainstorming and planning | [Lightweight brainstorming/planning decision](../decisions/2026-06-19-lightweight-brainstorming-planning.md) |
+| 2026-06-19 | Test stdio JSON-RPC/ACP clients over a duplex; Tauri needs webkit on Linux | [2026-06-19-acp-client-testing-and-headless-tauri.md](./2026-06-19-acp-client-testing-and-headless-tauri.md) | `app/` harness, ACP clients, headless builds | [v1 plan](../plans/2026-06-19-local-agent-harness-v1.md) |
 
 ## Logs
 

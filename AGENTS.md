@@ -278,4 +278,4 @@ Every speculative feature, abstraction, workflow, or context artifact must name 
 
 | Child contract | Scope | Purpose | Notes |
 |---|---|---|---|
-| _None yet_ | — | Index only existing child `AGENTS.md` files. | Do not create speculative child docs. |
+| [`app/AGENTS.md`](./app/AGENTS.md) | `app/` | Local-first agent harness: Tauri + Svelte app wrapping agent CLIs over ACP. | Built per the [v1 plan](./knowledge/plans/2026-06-19-local-agent-harness-v1.md). |

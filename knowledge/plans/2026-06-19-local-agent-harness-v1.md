@@ -5,7 +5,7 @@ description: Plan for a thin vertical slice of a Tauri agent harness — one age
 resource: ./knowledge/plans/2026-06-19-local-agent-harness-v1.md
 tags: [tauri, acp, svelte, agent-harness, local-first, plan]
 timestamp: 2026-06-19T00:00:00Z
-status: approved
+status: in_progress
 ---
 # Local-First Agent Harness v1 (Vertical Slice)
 
@@ -15,9 +15,12 @@ Plan index: [index.md](./index.md)
 Supporting decision: [../decisions/2026-06-19-local-agent-harness-architecture.md](../decisions/2026-06-19-local-agent-harness-architecture.md)  
 Supporting research: [../research/2026-06-19-local-agent-harness-stack.md](../research/2026-06-19-local-agent-harness-stack.md)
 
-> The app is greenfield in a **new project/repo**. This `local-fabric` repo is
-> the Fabric governance scaffold and holds this plan as durable handoff memory,
-> not the app code.
+> **Implementation location (updated):** the v1 slice is built **in this repo
+> under [`app/`](../../app/)** (its own Tauri+Svelte project with a dedicated
+> child [`AGENTS.md`](../../app/AGENTS.md)), not a separate repo — the practical
+> choice given the working repo scope. The rest of `local-fabric` remains the
+> Fabric governance scaffold. Extracting `app/` to a standalone repo later is a
+> cheap move if desired.
 
 ## Goal
 
@@ -39,17 +42,19 @@ view, validating the architecture before the OS metaphor or app factory.
 - Cost of delay: bespoke parsers or cloud-coupling would create high rework.
 - Smallest useful plan chosen: one agent, single window, ACP client + Claude Code launcher.
 
-## File Map (new project)
+## File Map (as built, under `app/`)
 
-| Path | Create/Modify | Responsibility |
+| Path | Status | Responsibility |
 |---|---|---|
-| `src-tauri/src/acp/mod.rs` | create | ACP client (JSON-RPC/stdio) + normalized `SessionEvent` type. |
-| `src-tauri/src/acp/launchers.rs` | create | Per-agent launch config (Claude Code first). |
-| `src-tauri/src/process.rs` | create | PTY/process spawning (`portable-pty`). |
-| `src-tauri/src/approval.rs` | create | Approval gateway relaying ACP permission requests. |
-| `src-tauri/src/store.rs` | create | SQLite session/project/settings persistence. |
-| `src-tauri/tauri.conf.json` + capabilities | create | Least-privilege shell + fs allowlist. |
-| `src/` (Svelte) | create | Session window, event renderer, file tree, terminal, approval dialog. |
+| `app/src-tauri/src/acp/protocol.rs` | done | Pure JSON-RPC + ACP types and `SessionEvent` normalization (unit-tested). |
+| `app/src-tauri/src/acp/connection.rs` | done | Async ACP client over agent stdio; request demux, streaming, permission tokens (integration-tested vs. mock agent). |
+| `app/src-tauri/src/acp/launchers.rs` | done | Per-agent launch config (Claude Code via `npx @zed-industries/claude-code-acp`; Codex/opencode scaffolded). |
+| `app/src-tauri/src/store.rs` | done | SQLite sessions/settings persistence (unit-tested). |
+| `app/src-tauri/src/files.rs` | done | Read-only working-dir file listing (unit-tested). |
+| `app/src-tauri/src/lib.rs` | done | Tauri commands + event forwarding; approval gateway is the permission path through `connection`. |
+| `app/src-tauri/tauri.conf.json` + capabilities | done | Least-privilege capabilities (`core:default`, `core:event:default`, `opener:default`). |
+| `app/src/lib/api.ts` + `app/src/lib/components/*` + `app/src/routes/+page.svelte` | done | Typed IPC bridge, event-stream renderer, approval dialog, file tree, composer. |
+| live PTY terminal pane (`portable-pty` + xterm.js) | deferred | Raw shell pane; deferred from v1 — agent command output already surfaces via ACP tool-call events. See Tasks/Verification. |
 
 ## Options Considered
 
@@ -84,13 +89,26 @@ view, validating the architecture before the OS metaphor or app factory.
 
 ## Verification (milestone-based)
 
-1. **ACP handshake:** Rust launches Claude Code as ACP subprocess; session init completes over stdio.
-2. **Stream proof:** a prompt yields streamed messages/tool-calls rendered distinctly in the UI.
-3. **Approval proof:** a risky action raises a permission request; the UI blocks until decided; decision reaches the agent.
-4. **Terminal/fs proof:** agent shell output shows live; file tree reflects on-disk changes.
-5. **Persistence proof:** restart reloads prior sessions from SQLite.
-6. **Offline proof:** with network disconnected, v1 still functions.
-7. **Second-launcher proof (v1.5 gate):** a Codex launcher flows through the same ACP client with no UI changes.
+Automated coverage (`cargo test` in `app/src-tauri`, 16 tests green) plus build
+gates (`pnpm check`, `pnpm build`, `cargo build`, all clean). GUI run-through is
+pending a desktop session — the build container is headless (no `DISPLAY`).
+
+1. **ACP handshake / stream / approval:** ✅ proven by the
+   `full_session_flow_against_mock_agent` integration test, which drives
+   `initialize` → `session/new` → `session/prompt` with a streamed
+   `agent_message_chunk`, a `session/request_permission` round-trip, and turn
+   completion over a real duplex transport.
+2. **Normalization:** ✅ unit tests cover message classification and every
+   modeled `session/update` variant, with unknown payloads preserved verbatim.
+3. **File tree:** ✅ `files.rs` listing unit-tested (dirs-first ordering).
+4. **Persistence:** ✅ SQLite upsert/list/idempotency unit-tested; live
+   restart-reload pending GUI verification.
+5. **Live GUI run-through (handshake against the real Claude Code adapter,
+   streaming render, approval dialog, restart reload, offline):** ⏳ pending a
+   desktop/`DISPLAY` session.
+6. **Terminal/fs live pane:** ⏳ deferred (see File Map).
+7. **Second-launcher proof (v1.5 gate):** ⏳ Codex/opencode launchers scaffolded;
+   not yet exercised.
 
 ## Out of v1 Scope
 
@@ -106,7 +124,10 @@ codehooks/auth/sync, Codex + opencode launchers.
 
 ## Closeout
 
-- [ ] v1 milestones 1–6 pass.
+- [x] Core slice implemented under `app/` (ACP client, launcher, approval path, SQLite, file tree, Svelte UI).
+- [x] Automated verification green: 16 Rust tests, `pnpm check`, `pnpm build`, `cargo build` (zero warnings).
+- [ ] Live GUI run-through against the real Claude Code adapter (pending a desktop session).
+- [ ] Live PTY terminal pane (deferred from v1).
 - [x] Supporting research and decision captured in this repo's knowledge base.
-- [x] Fabric indexes updated.
-- [ ] App code committed to its own (new) repo.
+- [x] Fabric indexes + child `AGENTS.md` updated.
+- [x] App code committed in this repo under `app/` (not a separate repo — see note above).
