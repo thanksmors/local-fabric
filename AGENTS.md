@@ -32,6 +32,7 @@ No child doc, workflow doc, knowledge file, template, or external reference may 
 | Test prompts | [`.fabric/test-prompts.md`](./.fabric/test-prompts.md) | present | Prompts for validating Fabric behavior in a fresh repo. |
 | Local secrets template | [`.env.example`](./.env.example) | present | Documents supported local environment variables without storing secrets. |
 | Ignore rules | [`.gitignore`](./.gitignore) | present | Ensures `.env` and local secret variants are not committed. |
+| opencode config | [`opencode.json`](./opencode.json) | present | Sets the default opencode model (`minimax-coding-plan/MiniMax-M3`) for harness agent sessions. Holds no secrets; auth is via `opencode auth login`. |
 
 Empty scaffold files are intentional. They provide concrete table shapes and rules so agents do not invent formats, but they do not imply that a real workflow, stage, or project-specific concept already exists.
 

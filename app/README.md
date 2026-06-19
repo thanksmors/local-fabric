@@ -23,26 +23,23 @@ The harness launches `opencode acp` and lets opencode pick the model from its ow
 config — ACP is model-agnostic. So "use MiniMax" is opencode configuration, not
 app configuration. **Your API key never goes in this repo.**
 
-```bash
-# 1. Authenticate MiniMax (interactive; key stored in
-#    ~/.local/share/opencode/auth.json, never in the repo).
-opencode auth login            # choose MiniMax, paste your key
-opencode auth list             # confirm MiniMax is configured
-
-# 2. Find the exact MiniMax model id and set it as opencode's default.
-opencode models | grep -i minimax     # e.g. minimax/MiniMax-M2 (confirm the id)
-```
-
-Set the default model in opencode's global config
-`~/.config/opencode/opencode.json` (or a project `opencode.json`):
+The default model is already set for you in the repo-root
+[`opencode.json`](../opencode.json):
 
 ```json
-{ "$schema": "https://opencode.ai/config.json", "model": "minimax/<model-id>" }
+{ "$schema": "https://opencode.ai/config.json", "model": "minimax-coding-plan/MiniMax-M3" }
 ```
 
-Quick sanity check that MiniMax works before involving the app:
+opencode finds this project config by walking up from its working directory, so
+you don't need to touch any hidden config folder. You only need to authenticate:
 
 ```bash
+# Authenticate MiniMax (interactive; key stored in
+# ~/.local/share/opencode/auth.json, never in the repo).
+opencode auth login            # choose the MiniMax coding plan, paste your key
+opencode auth list             # confirm it's configured
+
+# Sanity check that MiniMax works before involving the app:
 opencode run "say hello in five words"
 ```
 

@@ -44,11 +44,14 @@ and [architecture decision](../knowledge/decisions/2026-06-19-local-agent-harnes
   `protocolVersion: 1`, matching `protocol::PROTOCOL_VERSION`.
 - **Model selection is opencode's, not the harness's.** ACP is model-agnostic;
   opencode picks the model from its own config (`model` key, `provider/model`).
-  To run on MiniMax, configure opencode — do not add model/provider logic here.
+  The default is committed at the **repo root** in
+  [`opencode.json`](../opencode.json): `minimax-coding-plan/MiniMax-M3`. opencode
+  resolves this project config by walking up from its working directory. Do not
+  add model/provider logic in the app.
 - **Keys never live in this repo.** Use `opencode auth login` (stored in
   `~/.local/share/opencode/auth.json`). The harness spawns `opencode acp` with
   the parent environment inherited; it holds no credentials and needs none.
-- Setup steps and the MiniMax model-id lookup live in [`README.md`](./README.md).
+- Setup steps live in [`README.md`](./README.md).
 
 ## Work Guidance
 
