@@ -104,9 +104,9 @@ pending a desktop session — the build container is headless (no `DISPLAY`).
 3. **File tree:** ✅ `files.rs` listing unit-tested (dirs-first ordering).
 4. **Persistence:** ✅ SQLite upsert/list/idempotency unit-tested; live
    restart-reload pending GUI verification.
-5. **Live GUI run-through (handshake against the real Claude Code adapter,
-   streaming render, approval dialog, restart reload, offline):** ⏳ pending a
-   desktop/`DISPLAY` session.
+5. **Live GUI run-through:** ✅ verified by the user — `pnpm tauri dev` with the
+   opencode + MiniMax-M3 agent: session starts, output streams, and the approval
+   dialog fires, in the real window.
 6. **Terminal/fs live pane:** ⏳ deferred (see File Map).
 7. **opencode + MiniMax (first real agent):** ✅ real `opencode acp` (v1.17.8)
    replies to our `initialize` with `protocolVersion: 1`, proving live interop.
@@ -130,7 +130,7 @@ codehooks/auth/sync, Codex + opencode launchers.
 
 - [x] Core slice implemented under `app/` (ACP client, launcher, approval path, SQLite, file tree, Svelte UI).
 - [x] Automated verification green: 16 Rust tests, `pnpm check`, `pnpm build`, `cargo build` (zero warnings).
-- [ ] Live GUI run-through against the real Claude Code adapter (pending a desktop session).
+- [x] Live GUI run-through (opencode + MiniMax-M3): streaming + approvals confirmed in the app.
 - [ ] Live PTY terminal pane (deferred from v1).
 - [x] Supporting research and decision captured in this repo's knowledge base.
 - [x] Fabric indexes + child `AGENTS.md` updated.
