@@ -14,6 +14,9 @@ importers:
       '@tauri-apps/plugin-opener':
         specifier: ^2
         version: 2.5.4
+      winbox:
+        specifier: ^0.2.82
+        version: 0.2.82
     devDependencies:
       '@sveltejs/adapter-static':
         specifier: ^3.0.6
@@ -702,6 +705,9 @@ packages:
       vite:
         optional: true
 
+  winbox@0.2.82:
+    resolution: {integrity: sha512-fMHaLnnuhyw1mLvzmCTWMpRKDfXUK/Z08VdbyBqDaITFFAd3Fx2BGDCF6rzGSkWrQgo8fHTFpFICofyM36FTnA==}
+
   zimmerframe@1.1.4:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
 
@@ -1192,5 +1198,7 @@ snapshots:
   vitefu@1.1.3(vite@6.4.3):
     optionalDependencies:
       vite: 6.4.3
+
+  winbox@0.2.82: {}
 
   zimmerframe@1.1.4: {}

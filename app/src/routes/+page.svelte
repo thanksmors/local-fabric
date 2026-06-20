@@ -1,197 +1,114 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, mount, unmount } from "svelte";
   import type { UnlistenFn } from "@tauri-apps/api/event";
-  import { homeDir } from "@tauri-apps/api/path";
-  import {
-    onAcpEvent,
-    startSession,
-    sendPrompt,
-    resolvePermission,
-    listDir,
-    listSessions,
-    type AgentKind,
-    type SessionEvent,
-    type UiEvent,
-    type DirEntry,
-    type SessionRecord,
-    type PermissionOption,
-  } from "$lib/api";
-  import EventStream from "$lib/components/EventStream.svelte";
-  import ApprovalDialog from "$lib/components/ApprovalDialog.svelte";
-  import FileTree from "$lib/components/FileTree.svelte";
+  import WinBox from "winbox/src/js/winbox.js";
+  import "winbox/dist/css/winbox.min.css";
 
-  type Pending = {
-    token: number;
-    toolTitle: string | null;
-    options: PermissionOption[];
-  };
+  import { onAcpEvent, type AgentKind } from "$lib/api";
+  import { sessions, type SessionState } from "$lib/sessions.svelte";
+  import SessionWindow from "$lib/components/SessionWindow.svelte";
 
+  // --- new-session launcher state ---
   let agent = $state<AgentKind>("opencode");
-  let cwd = $state("");
-  let sessionId = $state<string | null>(null);
+  let cwd = $state("/home/user");
   let starting = $state(false);
 
-  let events = $state<SessionEvent[]>([]);
-  let pending = $state<Pending | null>(null);
-  let notices = $state<string[]>([]);
-  let promptText = $state("");
+  const AGENT_LABELS: Record<AgentKind, string> = {
+    opencode: "opencode",
+    claude_code: "Claude Code",
+    codex: "Codex CLI",
+  };
 
-  let entries = $state<DirEntry[]>([]);
-  let pastSessions = $state<SessionRecord[]>([]);
+  // --- windowing layer (the only place WinBox is touched; swap here later) ---
+  type OpenWindow = { win: WinBox; comp: Record<string, unknown> };
+  const windows = new Map<string, OpenWindow>();
+  let cascade = 0;
 
-  onMount(() => {
-    let unlisten: UnlistenFn | undefined;
-    onAcpEvent(handleEvent).then((fn) => (unlisten = fn));
-    // Default the working directory to the user's home so the field is usable.
-    homeDir()
-      .then((h) => {
-        if (!cwd) cwd = h;
-      })
-      .catch(() => {});
-    listSessions()
-      .then((s) => (pastSessions = s))
-      .catch((e) => (notices = [...notices, String(e)]));
-    return () => unlisten?.();
-  });
-
-  function handleEvent(e: UiEvent) {
-    if (e.kind === "session") {
-      appendStreamEvent(e.event);
-    } else if (e.kind === "permission") {
-      pending = { token: e.token, toolTitle: e.tool_title, options: e.options };
-    } else if (e.kind === "notice") {
-      notices = [...notices, e.message];
-    } else if (e.kind === "closed") {
-      notices = [...notices, "Agent session closed."];
-    }
+  function openWindow(session: SessionState) {
+    const offset = (cascade++ % 8) * 28;
+    const win = new WinBox({
+      title: `${AGENT_LABELS[session.agent]} — ${session.cwd}`,
+      width: 760,
+      height: 540,
+      minwidth: 380,
+      minheight: 280,
+      x: 80 + offset,
+      y: 60 + offset,
+      onclose: () => {
+        const open = windows.get(session.id);
+        if (open) unmount(open.comp);
+        windows.delete(session.id);
+        sessions.remove(session.id);
+        return false;
+      },
+    });
+    const comp = mount(SessionWindow, { target: win.body, props: { session } });
+    windows.set(session.id, { win, comp });
   }
 
-  // Coalesce consecutive streamed chunks of the same kind into one bubble.
-  function appendStreamEvent(ev: SessionEvent) {
-    const last = events[events.length - 1];
-    if (
-      last &&
-      (ev.type === "agent_message" || ev.type === "agent_thought") &&
-      last.type === ev.type
-    ) {
-      last.text += ev.text;
-      events = [...events];
-    } else {
-      events = [...events, ev];
-    }
-  }
-
-  async function navigate(path: string) {
-    try {
-      entries = await listDir(path);
-      cwd = path;
-    } catch (e) {
-      notices = [...notices, String(e)];
-    }
-  }
-
-  async function start() {
-    if (!cwd.trim()) {
-      notices = [...notices, "Enter a working directory first."];
-      return;
-    }
+  async function newSession() {
+    if (starting || !cwd.trim()) return;
     starting = true;
     try {
-      sessionId = await startSession(agent, cwd);
-      events = [];
-      await navigate(cwd);
-      pastSessions = await listSessions();
+      const session = await sessions.start(agent, cwd.trim());
+      openWindow(session);
     } catch (e) {
-      notices = [...notices, `Failed to start: ${e}`];
+      sessions.notices.push(`Failed to start: ${e}`);
     } finally {
       starting = false;
     }
   }
 
-  async function send() {
-    const text = promptText.trim();
-    if (!sessionId || !text) return;
-    promptText = "";
-    appendStreamEvent({ type: "user_message", text });
-    try {
-      await sendPrompt(sessionId, text);
-    } catch (e) {
-      notices = [...notices, `Prompt failed: ${e}`];
-    }
+  function focusWindow(id: string) {
+    windows.get(id)?.win.focus();
   }
 
-  async function resolve(optionId: string | null) {
-    if (!sessionId || !pending) return;
-    const token = pending.token;
-    pending = null;
-    try {
-      await resolvePermission(sessionId, token, optionId);
-    } catch (e) {
-      notices = [...notices, `Approval failed: ${e}`];
-    }
-  }
-
-  function onComposerKey(e: KeyboardEvent) {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      send();
-    }
-  }
+  onMount(() => {
+    let unlisten: UnlistenFn | undefined;
+    onAcpEvent((e) => sessions.handle(e)).then((fn) => (unlisten = fn));
+    return () => unlisten?.();
+  });
 </script>
 
-<div class="app">
-  <header>
-    <strong>local-fabric</strong>
-    <span class="tag">agent harness</span>
-    <div class="spacer"></div>
-    <select bind:value={agent} disabled={!!sessionId}>
-      <option value="opencode">opencode</option>
-      <option value="claude_code">Claude Code</option>
-      <option value="codex">Codex CLI</option>
-    </select>
-    <input class="cwd" bind:value={cwd} placeholder="working directory" disabled={!!sessionId} />
-    <button onclick={start} disabled={starting || !!sessionId}>
-      {starting ? "Starting…" : sessionId ? "Running" : "Start session"}
-    </button>
-  </header>
-
-  <div class="body">
-    <aside class="sidebar">
-      <FileTree {cwd} {entries} onnavigate={navigate} />
-      {#if pastSessions.length}
-        <div class="past">
-          <div class="past-h">Past sessions</div>
-          {#each pastSessions as s (s.id)}
-            <div class="past-item" title={s.cwd}>{s.title}</div>
-          {/each}
-        </div>
-      {/if}
-    </aside>
-
-    <main>
-      <EventStream {events} />
-      {#if notices.length}
-        <div class="notices">
-          {#each notices as n, i (i)}<div class="notice">{n}</div>{/each}
-        </div>
-      {/if}
-      <div class="composer">
-        <textarea
-          bind:value={promptText}
-          onkeydown={onComposerKey}
-          placeholder={sessionId
-            ? "Prompt the agent…  (Ctrl/Cmd+Enter to send)"
-            : "Start a session first"}
-          disabled={!sessionId}
-        ></textarea>
-        <button onclick={send} disabled={!sessionId || !promptText.trim()}>Send</button>
+<div class="desktop">
+  <div class="hint">
+    {#if sessions.list.length === 0}
+      <div class="empty">
+        <h1>local-fabric</h1>
+        <p>Launch an agent session from the bar below. Each session opens in its own window.</p>
       </div>
-    </main>
+    {/if}
   </div>
 
-  {#if pending}
-    <ApprovalDialog toolTitle={pending.toolTitle} options={pending.options} onresolve={resolve} />
+  {#if sessions.notices.length}
+    <div class="notices">
+      {#each sessions.notices as n, i (i)}
+        <button class="notice" onclick={() => sessions.dismissNotice(i)} title="dismiss">{n} ✕</button>
+      {/each}
+    </div>
   {/if}
+
+  <footer class="taskbar">
+    <strong class="brand">local-fabric</strong>
+    <div class="open-windows">
+      {#each sessions.list as s (s.id)}
+        <button class="tab" onclick={() => focusWindow(s.id)} title={s.cwd}>
+          {AGENT_LABELS[s.agent]}
+        </button>
+      {/each}
+    </div>
+    <div class="launcher">
+      <select bind:value={agent}>
+        <option value="opencode">opencode</option>
+        <option value="claude_code">Claude Code</option>
+        <option value="codex">Codex CLI</option>
+      </select>
+      <input class="cwd" bind:value={cwd} placeholder="working directory" />
+      <button class="start" onclick={newSession} disabled={starting || !cwd.trim()}>
+        {starting ? "Starting…" : "+ New session"}
+      </button>
+    </div>
+  </footer>
 </div>
 
 <style>
@@ -202,91 +119,115 @@
     color: #e7ecf1;
     font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   }
-  .app {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
+  .desktop {
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(1200px 600px at 70% -10%, #15212f 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #1a1726 0%, transparent 55%),
+      #0b0e12;
+    overflow: hidden;
   }
-  header {
+  .hint {
+    position: absolute;
+    inset: 0;
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.5rem 0.9rem;
-    border-bottom: 1px solid #1c232b;
-    background: #0f141a;
+    justify-content: center;
+    pointer-events: none;
   }
-  .tag {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    opacity: 0.5;
+  .empty {
+    text-align: center;
+    opacity: 0.55;
   }
-  .spacer { flex: 1; }
-  .body { display: flex; flex: 1; min-height: 0; }
-  .sidebar {
-    width: 16rem;
-    border-right: 1px solid #1c232b;
+  .empty h1 {
+    margin: 0 0 0.3rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .notices {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
     display: flex;
     flex-direction: column;
-    min-height: 0;
+    gap: 0.3rem;
+    max-width: 26rem;
+    z-index: 10;
   }
-  .past { border-top: 1px solid #1c232b; padding: 0.5rem 0; overflow-y: auto; max-height: 12rem; }
-  .past-h {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    opacity: 0.5;
-    padding: 0 0.6rem 0.3rem;
-  }
-  .past-item {
-    font-size: 0.78rem;
-    padding: 0.2rem 0.6rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    opacity: 0.85;
-  }
-  main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-  .notices { padding: 0 0.75rem; }
   .notice {
+    text-align: left;
     font-size: 0.78rem;
     color: #fca5a5;
     background: #1f1416;
-    border-radius: 4px;
-    padding: 0.3rem 0.5rem;
-    margin-bottom: 0.3rem;
+    border: 1px solid #3a1f22;
+    border-radius: 6px;
+    padding: 0.35rem 0.55rem;
+    cursor: pointer;
   }
-  .composer {
+  .taskbar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
-    gap: 0.5rem;
-    padding: 0.6rem 0.75rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.45rem 0.8rem;
+    background: rgba(15, 20, 26, 0.92);
     border-top: 1px solid #1c232b;
+    backdrop-filter: blur(6px);
+    z-index: 20;
   }
-  textarea {
-    flex: 1;
-    resize: none;
-    height: 3.2rem;
-    background: #141a21;
-    color: inherit;
-    border: 1px solid #28313b;
-    border-radius: 8px;
-    padding: 0.5rem 0.6rem;
-    font-family: inherit;
+  .brand {
     font-size: 0.9rem;
+  }
+  .open-windows {
+    display: flex;
+    gap: 0.35rem;
+    flex: 1;
+    overflow-x: auto;
+  }
+  .tab {
+    font-size: 0.78rem;
+    background: #1a212a;
+    color: inherit;
+    border: 1px solid #2a333d;
+    border-radius: 6px;
+    padding: 0.25rem 0.6rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tab:hover {
+    border-color: #4a5763;
+  }
+  .launcher {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
   }
   select,
   input,
-  button {
+  .start {
     background: #1a212a;
     color: inherit;
     border: 1px solid #2a333d;
     border-radius: 8px;
-    padding: 0.4rem 0.7rem;
-    font-size: 0.85rem;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.82rem;
   }
-  .cwd { width: 16rem; font-family: ui-monospace, monospace; }
-  button { cursor: pointer; }
-  button:hover:not(:disabled) { border-color: #4a5763; }
-  button:disabled,
-  select:disabled,
-  input:disabled { opacity: 0.5; cursor: default; }
+  .cwd {
+    width: 15rem;
+    font-family: ui-monospace, monospace;
+  }
+  .start {
+    cursor: pointer;
+  }
+  .start:hover:not(:disabled) {
+    border-color: #4a5763;
+  }
+  .start:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 </style>

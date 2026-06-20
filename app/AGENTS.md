@@ -17,7 +17,7 @@ and [architecture decision](../knowledge/decisions/2026-06-19-local-agent-harnes
 |---|---|
 | Scope | Everything under `app/` (Tauri backend `src-tauri/`, Svelte frontend `src/`). |
 | Backend | `src-tauri/src/`: `acp/` (protocol + connection + launchers), `store.rs`, `files.rs`, `lib.rs`. |
-| Frontend | `src/`: `lib/api.ts` (typed IPC bridge), `lib/components/`, `routes/+page.svelte`. |
+| Frontend | `src/`: `lib/api.ts` (typed IPC bridge), `lib/sessions.svelte.ts` (multi-session store + event routing), `lib/components/` (`SessionWindow`, `EventStream`, `ApprovalDialog`, `FileTree`), `routes/+page.svelte` (desktop shell + windowing). |
 | Excluded from VCS | `node_modules/`, `build/`, `.svelte-kit/`, `src-tauri/target/`, `src-tauri/gen/schemas/` (see `.gitignore`s). |
 
 ## Local Contracts
@@ -35,6 +35,12 @@ and [architecture decision](../knowledge/decisions/2026-06-19-local-agent-harnes
   work fully offline. SQLite (`store.rs`) is the device-local source of truth.
 - **Keep the IPC boundary typed.** `src/lib/api.ts` mirrors the serde shapes in
   `acp/` and `store.rs`; update both sides together.
+- **Windowing is a swappable layer.** Each agent session opens a window via
+  **WinBox.js**, created in one place — the window layer in `routes/+page.svelte`
+  (which `mount()`s a `SessionWindow` into the WinBox body). All session state and
+  backend-event routing live in `lib/sessions.svelte.ts`, independent of the
+  window engine, so WinBox can later be replaced with a custom shell without
+  touching session logic. Route events by `session_id`; never assume one session.
 
 ## Agents: opencode + MiniMax (first working agent)
 
