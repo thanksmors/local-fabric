@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import type { UnlistenFn } from "@tauri-apps/api/event";
+  import { homeDir } from "@tauri-apps/api/path";
   import {
     onAcpEvent,
     startSession,
@@ -26,7 +27,7 @@
   };
 
   let agent = $state<AgentKind>("opencode");
-  let cwd = $state("/home/user");
+  let cwd = $state("");
   let sessionId = $state<string | null>(null);
   let starting = $state(false);
 
@@ -41,6 +42,12 @@
   onMount(() => {
     let unlisten: UnlistenFn | undefined;
     onAcpEvent(handleEvent).then((fn) => (unlisten = fn));
+    // Default the working directory to the user's home so the field is usable.
+    homeDir()
+      .then((h) => {
+        if (!cwd) cwd = h;
+      })
+      .catch(() => {});
     listSessions()
       .then((s) => (pastSessions = s))
       .catch((e) => (notices = [...notices, String(e)]));
@@ -84,6 +91,10 @@
   }
 
   async function start() {
+    if (!cwd.trim()) {
+      notices = [...notices, "Enter a working directory first."];
+      return;
+    }
     starting = true;
     try {
       sessionId = await startSession(agent, cwd);
