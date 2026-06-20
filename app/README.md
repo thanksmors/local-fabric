@@ -23,25 +23,40 @@ The harness launches `opencode acp` and lets opencode pick the model from its ow
 config — ACP is model-agnostic. So "use MiniMax" is opencode configuration, not
 app configuration. **Your API key never goes in this repo.**
 
-The default model is already set for you in the repo-root
+The default model and provider auth are set for you in the repo-root
 [`opencode.json`](../opencode.json):
 
 ```json
-{ "$schema": "https://opencode.ai/config.json", "model": "minimax-coding-plan/MiniMax-M3" }
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "minimax-coding-plan/MiniMax-M3",
+  "provider": {
+    "minimax-coding-plan": {
+      "options": { "headers": { "X-Api-Key": "{env:MINIMAX_API_KEY}" } }
+    }
+  }
+}
 ```
 
 opencode finds this project config by walking up from its working directory, so
-you don't need to touch any hidden config folder. You only need to authenticate:
+you don't touch any hidden config folder. **You only supply the key via an
+environment variable** — it never goes in the repo:
 
 ```bash
-# Authenticate MiniMax (interactive; key stored in
-# ~/.local/share/opencode/auth.json, never in the repo).
-opencode auth login            # choose the MiniMax coding plan, paste your key
-opencode auth list             # confirm it's configured
-
-# Sanity check that MiniMax works before involving the app:
-opencode run "say hello in five words"
+export MINIMAX_API_KEY="<your-minimax-coding-plan-key>"   # from platform.minimax.io
+opencode run "say hello in five words"                    # sanity check
 ```
+
+### Why the explicit `X-Api-Key` header
+
+`minimax-coding-plan` is an Anthropic-compatible provider (`@ai-sdk/anthropic`,
+endpoint `https://api.minimax.io/anthropic/v1`) that authenticates with an
+`X-Api-Key` header. Current opencode builds do **not** reliably attach the stored
+credential for this provider — even after `opencode auth login` you get
+`login fail: Please carry the API secret key in the 'X-Api-Key' field`. The
+`headers` override above forces the key from `MINIMAX_API_KEY` onto every request,
+which fixes it. (If your plan lives on `minimaxi.com` instead of `minimax.io`,
+switch the model's provider accordingly.)
 
 ## Run the app
 

@@ -1,4 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "minimax-coding-plan/MiniMax-M3"
+  "model": "minimax-coding-plan/MiniMax-M3",
+  "provider": {
+    "minimax-coding-plan": {
+      "options": {
+        "headers": { "X-Api-Key": "{env:MINIMAX_API_KEY}" }
+      }
+    }
+  }
 }
